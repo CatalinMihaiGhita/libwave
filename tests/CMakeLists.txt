@@ -7,6 +7,4 @@ target_link_libraries(tests
     gmock
 )
 
-target_link_libraries(tests advapi32 iphlpapi psapi userenv shell32 ws2_32)
-
 install(TARGETS tests DESTINATION bin)

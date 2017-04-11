@@ -44,13 +44,13 @@ struct spy
 
     void inform(T t) const
     {
-            std::get<0>(*data) = std::move(t);
+        std::get<0>(*data) = std::move(t);
     }
 
     static void destroy(std::pair<T, T>* data)
     {
-            EXPECT_EQ(std::get<0>(*data), std::get<1>(*data));
-            delete data;
+        EXPECT_EQ(std::get<0>(*data), std::get<1>(*data));
+        delete data;
     }
 
     std::shared_ptr<std::pair<T, T>> data;
@@ -62,7 +62,7 @@ TEST(SourceTests, Callback)
     using namespace wave;
     source<int> s;
     s >>= $(int data){
-            EXPECT_EQ(data, 2);
+        EXPECT_EQ(data, 2);
     };
     s(2);
 }
@@ -72,10 +72,10 @@ TEST(SourceTests, Exception)
     using namespace wave;
     source<int> s;
     s >>= $(int data) {
-            EXPECT_EQ(data, 2);
-            throw std::exception();
+        EXPECT_EQ(data, 2);
+        throw std::exception();
     } $finally {
-            ASSERT_THROW(rethrow(), std::exception);
+        ASSERT_THROW(rethrow(), std::exception);
     };
     s(2);
 }
@@ -88,8 +88,8 @@ TEST(MergeTests, Callback)
     auto i = std::make_shared<int>(0);
     merge(idle{2}, timer{1,2})
     >>= ${
-            (*i)++;
-            merge_spy.inform(*i);
+        (*i)++;
+        merge_spy.inform(*i);
     };
 }
 
@@ -100,8 +100,8 @@ TEST(ZipTests, Callback)
     source<std::string> s2;
     auto z = zip(s1, s2);
     z >>= $(int data1, std::string data2) {
-            EXPECT_EQ(data1, 2);
-            EXPECT_EQ(data2, "sada");
+        EXPECT_EQ(data1, 2);
+        EXPECT_EQ(data2, "sada");
     };
     s1(2);
     s2(std::string("sada"));
@@ -117,10 +117,10 @@ TEST(FlatMapTests, Callback)
     idle{ 2 }
     >>= ${ return timer{ 1,2 }; }
     >>= ${
-            (*i)++;
-            s.inform(*i);
+        (*i)++;
+        s.inform(*i);
     } $finally{
-            rethrow();
+        rethrow();
     };
 }
 
@@ -133,16 +133,16 @@ TEST(FileTests, Reader)
 
     file f{ "text.txt" };
     f >>= ${
-            open_spy.inform(true);
-            return file_reader(f);
+        open_spy.inform(true);
+        return file_reader(f);
     } $finally{
-            rethrow();
+        rethrow();
     }
     >>= $(std::string data) {
-            read_spy.inform(data);
-            f.close();
+        read_spy.inform(data);
+        f.close();
     } $finally{
-            rethrow();
+        rethrow();
     };
 }
 
@@ -153,8 +153,8 @@ TEST(IdleTests, Callback)
     loop loop;
     auto t = std::make_shared<int>(0);
     idle{4} >>= ${
-            (*t)++;
-            idle_spy.inform(*t);
+        (*t)++;
+        idle_spy.inform(*t);
     };
 }
 
@@ -167,8 +167,8 @@ TEST(TimerTests, Callback)
     timer{ 1, 4 }
     >>= ${ return 1; }
     >>= $(int i){
-            (*t) += i;
-            timer_spy.inform(*t);
+        (*t) += i;
+        timer_spy.inform(*t);
     };
 }
 
@@ -180,14 +180,14 @@ TEST(AsyncTests, Affinity)
     auto main_id = std::this_thread::get_id();
     async_source<std::thread::id> s;
     s >>= $(std::thread::id i) {
-            EXPECT_NE(i, main_id);
+        EXPECT_NE(i, main_id);
     };
 
     queue_work(${
-            s(std::this_thread::get_id());
+        s(std::this_thread::get_id());
     }) >>= ${
-            EXPECT_EQ(main_id, std::this_thread::get_id());
-            s.close_later();
+        EXPECT_EQ(main_id, std::this_thread::get_id());
+        s.close_later();
     };
 }
 
@@ -198,17 +198,17 @@ TEST(AsyncTests, Times)
     loop loop;
     async_source<int> s;
     s >>= $(int i) {
-            async_spy.inform(i);
+        async_spy.inform(i);
     };
 
     queue_work(${
-            int i = 0;
-            while (i < 10) {
-                    s(i);
-                    i++;
-            }
+        int i = 0;
+        while (i < 10) {
+            s(i);
+            i++;
+        }
     }) >>= ${
-            s.close_later();
+        s.close_later();
     };
 }
 
@@ -222,25 +222,25 @@ TEST(TcpTests, ServerClient)
     loop loop;
     tcp_server server{ 5000 };
     server >>= ${
-            tcp_listen.inform(true);
-            auto client = server.accept();
-            tcp_reader(client)
-            >>= $(std::string data) {
-                    tcp_read.inform(data);
-                    server.close();
-                    client.close();
-            };
+        tcp_listen.inform(true);
+        auto client = server.accept();
+        tcp_reader(client)
+        >>= $(std::string data) {
+            tcp_read.inform(data);
+            server.close();
+            client.close();
+        };
     };
 
     idle{} >>= ${
-            tcp_client client{ "127.0.0.1", 5000 };
-            client >>= ${
-                    tcp_connect.inform(true);
-                    tcp_writer writer(client);
-                    writer >>= ${
-                            tcp_write.inform(true);
-                    };
-                    writer << "acasa";
+        tcp_client client{ "127.0.0.1", 5000 };
+        client >>= ${
+            tcp_connect.inform(true);
+            tcp_writer writer(client);
+            writer >>= ${
+                tcp_write.inform(true);
             };
+            writer << "acasa";
+        };
     };
 }
