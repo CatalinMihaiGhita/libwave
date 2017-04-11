@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(libwave)
-add_definitions(-std=c++14)
 include_directories(include)
 
 # We need thread support
@@ -46,26 +45,8 @@ set_target_properties(libgmock PROPERTIES
 include_directories("${source_dir}/googletest/include"
                     "${source_dir}/googlemock/include")
 
-# Download and install libuv
-ExternalProject_Add(
-    uv
-    GIT_REPOSITORY https://github.com/jen20/libuv-cmake.git
-    GIT_TAG v1.9.0
-    # Disable install step
-    INSTALL_COMMAND ""
-)
-
-ExternalProject_Get_Property(uv source_dir binary_dir)
-
-add_library(libuv IMPORTED STATIC GLOBAL)
-add_dependencies(libuv uv)
-
-set_target_properties(libuv PROPERTIES
-    "IMPORTED_LOCATION" "${binary_dir}/libuv.a"
-    "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}"
-)
-
-include_directories("${source_dir}/libuv/include")
+add_subdirectory(libuv)
+include_directories(libuv/libuv/include)
 
 add_subdirectory(src)
 add_subdirectory(tests)
