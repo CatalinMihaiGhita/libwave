@@ -20,6 +20,9 @@
 * SOFTWARE.
 */
 
+#include <exception>
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include <wave.h>
@@ -70,7 +73,7 @@ TEST(SourceTests, Exception)
     source<int> s;
     s >>= $(int data) {
             EXPECT_EQ(data, 2);
-            throw std::exception("ha");
+            throw std::exception();
     } $finally {
             ASSERT_THROW(rethrow(), std::exception);
     };

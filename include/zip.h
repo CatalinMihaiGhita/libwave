@@ -27,80 +27,83 @@
 #include "wave_private.h"
 
 namespace wave {
-	namespace detail {
-		template <typename T, typename U>
-		struct decay_zip_map;
+namespace detail {
 
-		template <typename... T, typename... U>
-		struct decay_zip_map <generic_source<T...>, generic_source<U...>> : public generic_source<T..., U...>
-		{
-			std::queue<std::tuple<T...>> queue1;
-			std::queue<std::tuple<U...>> queue2;
+template <typename T, typename U>
+struct decay_zip_map;
 
-			template <typename F>
-			void check_pop(F& f)
-			{
-				if (queue1.size() > 0 && queue2.size() > 0) {
-					this->then_expand(f, std::index_sequence_for<T...>{}, std::index_sequence_for<U...>{});
-					queue1.pop();
-					queue2.pop();
-				}
-			}
+template <typename... T, typename... U>
+struct decay_zip_map <generic_source<T...>, generic_source<U...>> : public generic_source<T..., U...>
+{
+    std::queue<std::tuple<T...>> queue1;
+    std::queue<std::tuple<U...>> queue2;
 
-			template <typename F, size_t... I, size_t... J>
-			void then_expand(F &f, std::index_sequence<I...>, std::index_sequence<J...>)
-			{
-				auto& t1 = queue1.front();
-				auto& t2 = queue2.front();
-				f(std::move(std::get<I>(t1))..., std::move(std::get<J>(t2))...);
-			}
+    template <typename F>
+    void check_pop(F& f)
+    {
+        if (queue1.size() > 0 && queue2.size() > 0) {
+            this->then_expand(f, std::index_sequence_for<T...>{}, std::index_sequence_for<U...>{});
+            queue1.pop();
+            queue2.pop();
+        }
+    }
 
-			template <typename F>
-			constexpr decltype(auto) queue_args1(F& f)
-			{
-				return [this, f](T... args) {
-					queue1.emplace(std::tuple<T...>(std::move(args)...));
-					check_pop(f);
-				};
-			}
+    template <typename F, size_t... I, size_t... J>
+    void then_expand(F &f, std::index_sequence<I...>, std::index_sequence<J...>)
+    {
+        auto& t1 = queue1.front();
+        auto& t2 = queue2.front();
+        f(std::move(std::get<I>(t1))..., std::move(std::get<J>(t2))...);
+    }
 
-			template <typename F>
-			constexpr decltype(auto) queue_args2(F& f)
-			{
-				return [this, f](U... args) {
-					queue2.emplace(std::tuple<U...>(std::move(args)...));
-					check_pop(f);
-				};
-			}
-		};
+    template <typename F>
+    constexpr decltype(auto) queue_args1(F& f)
+    {
+        return [this, f](T... args) {
+            queue1.emplace(std::tuple<T...>(std::move(args)...));
+            check_pop(f);
+        };
+    }
 
-		template <typename T, typename U>
-		struct zip_map : public decay_zip_map <typename T::source_type, typename U::source_type>
-		{
-			zip_map(T t, U u)
-				: t(std::move(t))
-				, u(std::move(u))
-			{
-			}
+    template <typename F>
+    constexpr decltype(auto) queue_args2(F& f)
+    {
+        return [this, f](U... args) {
+            queue2.emplace(std::tuple<U...>(std::move(args)...));
+            check_pop(f);
+        };
+    }
+};
 
-			template <typename F>
-			void operator>>=(F f)
-			{
-				t >>= this->queue_args1(f);
-				u >>= this->queue_args2(f);
-			}
+template <typename T, typename U>
+struct zip_map : public decay_zip_map <typename T::source_type, typename U::source_type>
+{
+    zip_map(T t, U u)
+        : t(std::move(t))
+        , u(std::move(u))
+    {
+    }
 
-			T t;
-			U u;
-		};
-	}
+    template <typename F>
+    void operator>>=(F f)
+    {
+        t >>= this->queue_args1(f);
+        u >>= this->queue_args2(f);
+    }
 
-	template <typename T, typename U>
-	decltype(auto) zip(T&& t, U&& u)
-	{
-		return detail::zip_map<std::decay_t<T>,std::decay_t<U>> {
-			std::forward<T>(t),
-			std::forward<U>(u)
-		};
-	}
+    T t;
+    U u;
+};
+
+}
+
+template <typename T, typename U>
+decltype(auto) zip(T&& t, U&& u)
+{
+    return detail::zip_map<std::decay_t<T>,std::decay_t<U>> {
+            std::forward<T>(t),
+            std::forward<U>(u)
+    };
+}
+
 }

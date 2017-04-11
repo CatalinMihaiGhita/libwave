@@ -75,7 +75,7 @@ namespace wave {
 				auto h = static_cast<worker_handle<Task>*>(handle->data);
 				try {
 					if (status != 0) {
-						throw std::exception("status != 0");
+                                                throw std::exception();
 					}
 					auto p = static_cast<work_start*>(h->after_cb.get());
 					p->functor();

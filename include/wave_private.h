@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <exception>
+
 namespace wave {
 namespace detail {
 
@@ -109,24 +111,7 @@ namespace detail {
 			source >>= u;
 		}
 		T t; U u;
-	};
-
-	template <typename F>
-	struct final_act_handle
-	{
-		final_act_handle(F f)
-			: f(std::move(f))
-			, valid(1)
-		{
-		}
-
-		~final_act_handle()
-		{
-			f();
-		}
-		F f;
-		int count;
-	};
+        };
 
 	template <typename... T>
 	struct source_handle

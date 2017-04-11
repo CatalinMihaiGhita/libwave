@@ -25,34 +25,36 @@
 #include "async_private.h"
 
 namespace wave {
-	template <typename... T>
-	class async_source : public detail::generic_source<T...>
-	{
-	public:
-		async_source()
-			: handle(std::make_shared<detail::async_handle<T...>>())
-		{
-			handle->self = handle;
-		}
 
-		template <typename... U>
-		void operator()(U&&... values) const {
-			handle->invoke(std::forward<U>(values)...);
-		}
+template <typename... T>
+class async_source : public detail::generic_source<T...>
+{
+public:
+    async_source()
+        : handle(std::make_shared<detail::async_handle<T...>>())
+    {
+        handle->self = handle;
+    }
 
-		void close() const { handle->close(); }
-		void close_later() const { handle->close_later (); }
+    template <typename... U>
+    void operator()(U&&... values) const {
+        handle->invoke(std::forward<U>(values)...);
+    }
 
-		template <typename F>
-		void operator>>=(F&& f) {
-			handle->async_cb.reset(
-				new detail::async_start<std::decay_t<F>, T...>{
-					std::forward<F>(f),
-					handle.get()
-				});
-		}
+    void close() const { handle->close(); }
+    void close_later() const { handle->close_later (); }
 
-	private:
-		std::shared_ptr<detail::async_handle<T...>> handle;
-	};
+    template <typename F>
+    void operator>>=(F&& f) {
+        handle->async_cb.reset(
+            new detail::async_start<std::decay_t<F>, T...>{
+                std::forward<F>(f),
+                handle.get()
+            });
+}
+
+private:
+    std::shared_ptr<detail::async_handle<T...>> handle;
+};
+
 }

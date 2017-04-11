@@ -43,14 +43,14 @@ namespace wave {
 		     ,typename DT = typename std::decay_t<T>
 			 ,typename DU = typename std::decay_t<U>
 		     ,typename R = typename detail::lambda<DT>::result_type>
-	using map_t = typename std::conditional_t<is_source_v<R>,
-											  detail::flat_map<DT, DU>,
-											  detail::map<DT, DU, R>>;
+        using map_t = typename std::conditional_t<is_source_v<R>,
+                                                  detail::flat_map<DT, DU>,
+                                                  detail::map<DT, DU, R>>;
 
 	template
 		<typename T
 		,typename U
-		,typename M = typename map_t<T,U>>
+                ,typename M = map_t<T,U>>
 	M operator>>=(T&& t, U&& u)
 	{
 		return M{ std::forward<T>(t), std::forward<U>(u) };

@@ -173,7 +173,7 @@ namespace detail {
 			auto h = static_cast<tcp_client_handle*>(req->data);
 			try {
 				if (status != 0) {
-					throw std::exception("status not 0");
+                                        throw std::exception();
 				}
 				auto p = static_cast<tcp_connect*>(h->connect_cb.get());
 				h->poll_disconnect();
@@ -211,7 +211,7 @@ namespace detail {
 			try {
 				auto p = static_cast<tcp_read*>(h->read_cb.get());
 				if (nread < 0) {
-					throw std::exception("read < 0");
+                                        throw std::exception();
 				}
 				p->functor(std::string(buf->base, nread));
 			}
@@ -238,7 +238,7 @@ namespace detail {
 			auto h = static_cast<tcp_client_handle*>(req->data);
 			try {
 				if (status != 0) {
-					throw std::exception("status not 0");
+                                        throw std::exception();
 				}
 				auto p = static_cast<tcp_write*>(h->write_cb.get());
 				p->functor();
@@ -305,7 +305,7 @@ namespace detail {
 			auto h = static_cast<tcp_server_handle*>(req->data);
 			try {
 				if (status < 0) {
-					throw std::exception("status < 0");
+                                        throw std::exception();
 				}
 				auto p = static_cast<tcp_listen*>(h->listen_cb.get());
 				p->functor();
