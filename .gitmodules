@@ -1,3 +1,6 @@
 [submodule "libuv/libuv"]
 	path = libuv/libuv
 	url = https://github.com/libuv/libuv
+[submodule "googletest"]
+	path = googletest
+	url = https://github.com/google/googletest
