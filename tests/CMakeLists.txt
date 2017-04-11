@@ -1,5 +1,9 @@
+enable_testing()
 add_definitions(-std=c++14)
-add_executable(tests gtest_main.cc tests.cpp)
+add_executable(tests
+    tests.cpp
+    ${gtestmain}
+)
 
 target_link_libraries(tests
     uv
@@ -7,4 +11,7 @@ target_link_libraries(tests
     gmock
 )
 
-install(TARGETS tests DESTINATION bin)
+add_test(
+    NAME tests
+    COMMAND tests
+)
