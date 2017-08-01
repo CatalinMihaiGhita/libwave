@@ -29,18 +29,20 @@
 #include "wave.h"
 
 namespace wave {
-	class timer : public detail::generic_source<>
-	{
-	public:
-		timer(unsigned long long timeout, unsigned times = 1)
-			: handle{ new detail::timer_handle(timeout, times) }{}
-		void stop() const { handle->stop(); }
-		template <class F>
-		void operator>>= (F functor) {
-			handle->timer_cb.reset(new detail::ticking<F>{ std::move(functor), handle });
-		}
 
-	private:
-		detail::timer_handle* handle;
-	};
+class timer : public detail::generic_source<>
+{
+public:
+    timer(unsigned long long timeout, unsigned times = 1)
+        : handle{ new detail::timer_handle(timeout, times) }{}
+    void stop() const { handle->stop(); }
+    template <class F>
+    void operator>>= (F functor) {
+        handle->timer_cb.reset(new detail::ticking<F>{ std::move(functor), handle });
+    }
+
+private:
+    detail::timer_handle* handle;
+};
+
 }

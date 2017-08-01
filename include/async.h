@@ -47,11 +47,11 @@ public:
     template <typename F>
     void operator>>=(F&& f) {
         handle->async_cb.reset(
-            new detail::async_start<std::decay_t<F>, T...>{
-                std::forward<F>(f),
-                handle.get()
-            });
-}
+                    new detail::async_start<std::decay_t<F>, T...>{
+                        std::forward<F>(f),
+                        handle.get()
+                    });
+    }
 
 private:
     std::shared_ptr<detail::async_handle<T...>> handle;

@@ -28,38 +28,39 @@
 
 namespace wave {
 namespace detail {
-	template <typename... Us>
-	struct merge_map : public abstract_source
-	{
-		std::tuple<Us...> sources;
 
-		merge_map(Us&&... us)
-			: sources{std::move(us)...}
-		{}
+template <typename... Us>
+struct merge_map : public abstract_source
+{
+    std::tuple<Us...> sources;
 
-		merge_map(const Us&... us)
-			: sources{ us... }
-		{}
+    merge_map(Us&&... us)
+        : sources{std::move(us)...}
+    {}
 
-		template <typename F>
-		void operator>>=(const F& f)
-		{
-			map_tuple(f, std::index_sequence_for<Us...>{});
-		}
+    merge_map(const Us&... us)
+        : sources{ us... }
+    {}
 
-		template <typename F, size_t... I>
-		void map_tuple(const F& f, std::index_sequence<I...>)
-		{
-			int dummy[] = { 0, (std::get<I>(sources).operator>>=(f), 0) ... };
-			(void)dummy;
-		}
-	};
+    template <typename F>
+    void operator>>=(const F& f)
+    {
+        map_tuple(f, std::index_sequence_for<Us...>{});
+    }
+
+    template <typename F, size_t... I>
+    void map_tuple(const F& f, std::index_sequence<I...>)
+    {
+        int dummy[] = { 0, (std::get<I>(sources).operator>>=(f), 0) ... };
+        (void)dummy;
+    }
+};
 }
 
 template <typename... Us>
 decltype(auto) merge(Us&&... us)
 {
-	return detail::merge_map<std::decay_t<Us>...>{std::forward<Us>(us)...};
+    return detail::merge_map<std::decay_t<Us>...>{std::forward<Us>(us)...};
 }
 
 }

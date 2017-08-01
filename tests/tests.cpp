@@ -31,6 +31,7 @@
 #include <async.h>
 #include <worker.h>
 #include <merge.h>
+#include <stream.h>
 #include <zip.h>
 #include <file.h>
 #include <tcp.h>
@@ -224,8 +225,7 @@ TEST(TcpTests, ServerClient)
     server >>= ${
         tcp_listen.inform(true);
         auto client = server.accept();
-        tcp_reader(client)
-        >>= $(std::string data) {
+        client >>= $(std::string data) {
             tcp_read.inform(data);
             server.close();
             client.close();
@@ -234,13 +234,12 @@ TEST(TcpTests, ServerClient)
 
     idle{} >>= ${
         tcp_client client{ "127.0.0.1", 5000 };
-        client >>= ${
+        client.connected() >>= ${
             tcp_connect.inform(true);
-            tcp_writer writer(client);
-            writer >>= ${
+            client.wrote() >>= ${
                 tcp_write.inform(true);
             };
-            writer << "acasa";
+            client << "acasa";
         };
     };
 }

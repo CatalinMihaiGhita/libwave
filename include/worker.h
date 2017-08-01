@@ -26,25 +26,27 @@
 
 namespace wave
 {
-	template <typename Task>
-	class worker : public detail::generic_source<>
-	{
-	public:
-		worker(Task task)
-			: handle(new detail::worker_handle<Task>(std::move(task)))
-		{}
-		void cancel() const { handle->cancel(); }
-		template <class F>
-		void operator>>= (F functor) {
-			handle->after_cb.reset(new detail::work_start<Task,F>{ std::move(functor), handle });
-		}
-	private:
-		detail::worker_handle<Task>* handle;
-	};
 
-	template <typename Task>
-	decltype(auto) queue_work(Task&& task)
-	{
-		return worker<std::decay_t<Task>>(std::forward<Task>(task));
-	}
+template <typename Task>
+class worker : public detail::generic_source<>
+{
+public:
+    worker(Task task)
+        : handle(new detail::worker_handle<Task>(std::move(task)))
+    {}
+    void cancel() const { handle->cancel(); }
+    template <class F>
+    void operator>>= (F functor) {
+        handle->after_cb.reset(new detail::work_start<Task,F>{ std::move(functor), handle });
+    }
+private:
+    detail::worker_handle<Task>* handle;
+};
+
+template <typename Task>
+decltype(auto) queue_work(Task&& task)
+{
+    return
+            worker<std::decay_t<Task>>(std::forward<Task>(task));
+}
 }

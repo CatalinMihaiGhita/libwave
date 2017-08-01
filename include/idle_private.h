@@ -26,73 +26,75 @@
 
 namespace wave {
 namespace detail {
-	struct idle_handle
-	{
-		uv_idle_t idle;
-		unsigned times;
-		std::unique_ptr<callback> idle_cb;
 
-		idle_handle(unsigned times)
-			: times(times)
-		{
-			uv_idle_init(uv_default_loop(), &idle);
-			idle.data = this;
-			uv_idle_start(&idle, default_idle_cb);
-		}
+struct idle_handle
+{
+    uv_idle_t idle;
+    unsigned times;
+    std::unique_ptr<callback> idle_cb;
 
-		static void default_idle_cb(uv_idle_t* handle)
-		{
-			auto h = static_cast<idle_handle*>(handle->data);
-			h->stop();
-		}
+    idle_handle(unsigned times)
+        : times(times)
+    {
+        uv_idle_init(uv_default_loop(), &idle);
+        idle.data = this;
+        uv_idle_start(&idle, default_idle_cb);
+    }
 
-		void after()
-		{
-			if (times > 0 && --times == 0) {
-				stop();
-			}
-		}
+    static void default_idle_cb(uv_idle_t* handle)
+    {
+        auto h = static_cast<idle_handle*>(handle->data);
+        h->stop();
+    }
 
-		void stop()
-		{
-			if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&idle))) {
-				uv_idle_stop(&idle);
-				uv_close(reinterpret_cast<uv_handle_t*>(&idle), [](uv_handle_t* handle) {
-					delete static_cast<idle_handle*>(handle->data);
-				});
-			}
-		}
-	};
+    void after()
+    {
+        if (times > 0 && --times == 0) {
+            stop();
+        }
+    }
 
-	template <class F>
-	struct idling : public callback
-	{
-		idling(F&& f, idle_handle* h)
-			: functor(std::move(f))
-		{
-			h->idle.idle_cb = cb;
-		}
+    void stop()
+    {
+        if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&idle))) {
+            uv_idle_stop(&idle);
+            uv_close(reinterpret_cast<uv_handle_t*>(&idle), [](uv_handle_t* handle) {
+                delete static_cast<idle_handle*>(handle->data);
+            });
+        }
+    }
+};
 
-		idling(const F& f, idle_handle* h)
-			: functor(f)
-		{
-			h->idle.idle_cb = cb;
-		}
+template <class F>
+struct idling : public callback
+{
+    idling(F&& f, idle_handle* h)
+        : functor(std::move(f))
+    {
+        h->idle.idle_cb = cb;
+    }
 
-		static void cb(uv_idle_t* handle)
-		{
-			auto h = static_cast<idle_handle*>(handle->data);
-			try {
-				auto start = static_cast<idling*>(h->idle_cb.get());
-				start->functor();
-				h->after();
-			} catch (...) {
-				h->stop();
-				h->idle_cb.reset();
-			}
-		};
+    idling(const F& f, idle_handle* h)
+        : functor(f)
+    {
+        h->idle.idle_cb = cb;
+    }
 
-		F functor;
-	};
+    static void cb(uv_idle_t* handle)
+    {
+        auto h = static_cast<idle_handle*>(handle->data);
+        try {
+            auto start = static_cast<idling*>(h->idle_cb.get());
+            start->functor();
+            h->after();
+        } catch (...) {
+            h->stop();
+            h->idle_cb.reset();
+        }
+    };
+
+    F functor;
+};
+
 }
 }

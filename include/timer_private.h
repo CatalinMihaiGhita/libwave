@@ -26,69 +26,71 @@
 
 namespace wave {
 namespace detail {
-	struct timer_handle
-	{
-		uv_timer_t timer;
-		unsigned times;
-		std::unique_ptr<callback> timer_cb;
-		std::exception_ptr cought_ex;
 
-		timer_handle(unsigned long long timeout, unsigned times = 1)
-			: times(times)
-		{
-			uv_timer_init(uv_default_loop(), &timer);
-			timer.data = this;
-			uv_timer_start(&timer, default_timer_cb, timeout, timeout);
-		}
+struct timer_handle
+{
+    uv_timer_t timer;
+    unsigned times;
+    std::unique_ptr<callback> timer_cb;
+    std::exception_ptr cought_ex;
 
-		static void default_timer_cb(uv_timer_t* handle)
-		{
-			auto h = static_cast<timer_handle*>(handle->data);
-			h->stop();
-		}
+    timer_handle(unsigned long long timeout, unsigned times = 1)
+        : times(times)
+    {
+        uv_timer_init(uv_default_loop(), &timer);
+        timer.data = this;
+        uv_timer_start(&timer, default_timer_cb, timeout, timeout);
+    }
 
-		void after()
-		{
-			if (times > 0 && --times == 0) {
-				stop();
-			}
-		}
+    static void default_timer_cb(uv_timer_t* handle)
+    {
+        auto h = static_cast<timer_handle*>(handle->data);
+        h->stop();
+    }
 
-		void stop()
-		{
-			if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&timer))) {
-				uv_timer_stop(&timer);
-				uv_close(reinterpret_cast<uv_handle_t*>(&timer),
-				[](uv_handle_t* handle) {
-					auto p = static_cast<timer_handle*>(handle->data);
-					delete p;
-				});
-			}
-		}
-	};
+    void after()
+    {
+        if (times > 0 && --times == 0) {
+            stop();
+        }
+    }
 
-	template <class F>
-	struct ticking : public callback
-	{
-		F functor;
-		ticking(F f, timer_handle* h)
-			: functor(std::move(f))
-		{
-			h->timer.timer_cb = cb;
-		}
+    void stop()
+    {
+        if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&timer))) {
+            uv_timer_stop(&timer);
+            uv_close(reinterpret_cast<uv_handle_t*>(&timer),
+                     [](uv_handle_t* handle) {
+                auto p = static_cast<timer_handle*>(handle->data);
+                delete p;
+            });
+        }
+    }
+};
 
-		static void cb(uv_timer_t* handle)
-		{
-			auto h = static_cast<timer_handle*>(handle->data);
-			try {
-				auto start = static_cast<ticking*>(h->timer_cb.get());
-				start->functor();
-				h->after();
-			} catch (...) {
-				h->stop();
-				h->timer_cb.reset();
-			}
-		}
-	};
+template <class F>
+struct ticking : public callback
+{
+    F functor;
+    ticking(F f, timer_handle* h)
+        : functor(std::move(f))
+    {
+        h->timer.timer_cb = cb;
+    }
+
+    static void cb(uv_timer_t* handle)
+    {
+        auto h = static_cast<timer_handle*>(handle->data);
+        try {
+            auto start = static_cast<ticking*>(h->timer_cb.get());
+            start->functor();
+            h->after();
+        } catch (...) {
+            h->stop();
+            h->timer_cb.reset();
+        }
+    }
+};
+
 }
 }

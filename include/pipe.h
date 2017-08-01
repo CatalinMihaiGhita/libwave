@@ -1,6 +1,4 @@
 /*
-* MIT License
-*
 * Copyright(c) 2017 Catalin Mihai Ghita
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,15 +20,27 @@
 * SOFTWARE.
 */
 
-#include "async.h"
-#include "file.h"
-#include "idle.h"
-#include "merge.h"
-#include "process.h"
-#include "tcp.h"
-#include "pipe.h"
-#include "timer.h"
-#include "stream.h"
+#pragma once
+
+#include "pipe_private.h"
 #include "wave.h"
-#include "worker.h"
-#include "zip.h"
+#include "stream.h"
+
+namespace wave {
+
+class pipe : public stream
+{
+public:
+    pipe(std::string domain)
+        : stream(new detail::pipe_handle(std::move(domain))) {}
+
+    pipe(int fd)
+        : stream(new detail::pipe_handle(fd)) {}
+
+private:
+    pipe(detail::pipe_handle* handle)
+        : stream(handle) {}
+    friend class process;
+};
+
+}

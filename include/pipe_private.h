@@ -1,6 +1,4 @@
 /*
-* MIT License
-*
 * Copyright(c) 2017 Catalin Mihai Ghita
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,15 +20,53 @@
 * SOFTWARE.
 */
 
-#include "async.h"
-#include "file.h"
-#include "idle.h"
-#include "merge.h"
-#include "process.h"
-#include "tcp.h"
-#include "pipe.h"
-#include "timer.h"
-#include "stream.h"
-#include "wave.h"
-#include "worker.h"
-#include "zip.h"
+#pragma once
+#include <iostream>
+
+#include <memory>
+#include <string>
+
+#include <uv.h>
+
+#include "memory.h"
+#include "stream_private.h"
+
+namespace wave {
+namespace detail {
+
+struct pipe_handle : public stream_handle
+{
+    pipe_handle()
+    {
+        init();
+    }
+
+    pipe_handle(std::string domain)
+    {
+        init();
+        uv_pipe_connect(&connect_handle, &pipe, domain.c_str(), connect_handle.cb);
+    }
+
+    pipe_handle(int fd)
+    {
+        init();
+        uv_pipe_open(&pipe, fd);
+    }
+
+    void init()
+    {
+        uv_pipe_init(uv_default_loop(), &pipe, 1);
+        stream_handle::init(reinterpret_cast<uv_stream_t*>(&pipe));
+        close_cb = pipe_close_cb;
+    }
+
+    static void pipe_close_cb(uv_handle_t* handle)
+    {
+        delete static_cast<pipe_handle*>(handle->data);
+    }
+
+    uv_pipe_t pipe;
+};
+
+}
+}

@@ -29,63 +29,65 @@
 #include "wave_private.h"
 
 namespace wave {
-	namespace detail {
-		template<typename Task>
-		struct worker_handle
-		{
-			uv_work_t work;
-			Task task;
-			std::unique_ptr<callback> after_cb;
+namespace detail {
 
-			worker_handle(Task task)
-				: task(std::move(task))
-			{
-				work.data = this;
-				uv_queue_work(uv_default_loop(), &work, default_work_cb, default_after_work_cb);
-			}
+template<typename Task>
+struct worker_handle
+{
+    uv_work_t work;
+    Task task;
+    std::unique_ptr<callback> after_cb;
 
-			static void default_work_cb(uv_work_t* handle)
-			{
-				auto p = static_cast<worker_handle*>(handle->data);
-				p->task();
-			}
+    worker_handle(Task task)
+        : task(std::move(task))
+    {
+        work.data = this;
+        uv_queue_work(uv_default_loop(), &work, default_work_cb, default_after_work_cb);
+    }
 
-			static void default_after_work_cb(uv_work_t* handle, int status)
-			{
-				delete static_cast<worker_handle*>(handle->data);
-			}
+    static void default_work_cb(uv_work_t* handle)
+    {
+        auto p = static_cast<worker_handle*>(handle->data);
+        p->task();
+    }
 
-			void cancel()
-			{
-				uv_cancel(reinterpret_cast<uv_req_t*>(&work));
-			}
-		};
+    static void default_after_work_cb(uv_work_t* handle, int status)
+    {
+        delete static_cast<worker_handle*>(handle->data);
+    }
 
-		template <typename Task, typename F >
-		struct work_start : public callback
-		{
-			work_start(F f, worker_handle<Task>* h)
-				: functor(std::move(f))
-			{
-				h->work.after_work_cb = cb;
-			}
+    void cancel()
+    {
+        uv_cancel(reinterpret_cast<uv_req_t*>(&work));
+    }
+};
 
-			static void cb(uv_work_t* handle, int status)
-			{
-				auto h = static_cast<worker_handle<Task>*>(handle->data);
-				try {
-					if (status != 0) {
-                                                throw std::exception();
-					}
-					auto p = static_cast<work_start*>(h->after_cb.get());
-					p->functor();
-					delete h;
-				}
-				catch (...) {
-					delete h;
-				}
-			}
-			F functor;
-		};
-	}
+template <typename Task, typename F >
+struct work_start : public callback
+{
+    work_start(F f, worker_handle<Task>* h)
+        : functor(std::move(f))
+    {
+        h->work.after_work_cb = cb;
+    }
+
+    static void cb(uv_work_t* handle, int status)
+    {
+        auto h = static_cast<worker_handle<Task>*>(handle->data);
+        try {
+            if (status != 0) {
+                throw std::exception();
+            }
+            auto p = static_cast<work_start*>(h->after_cb.get());
+            p->functor();
+            delete h;
+        }
+        catch (...) {
+            delete h;
+        }
+    }
+    F functor;
+};
+
+}
 }

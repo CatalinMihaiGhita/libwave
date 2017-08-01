@@ -1,6 +1,4 @@
 /*
-* MIT License
-*
 * Copyright(c) 2017 Catalin Mihai Ghita
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,15 +20,43 @@
 * SOFTWARE.
 */
 
-#include "async.h"
-#include "file.h"
-#include "idle.h"
-#include "merge.h"
-#include "process.h"
-#include "tcp.h"
-#include "pipe.h"
-#include "timer.h"
-#include "stream.h"
-#include "wave.h"
-#include "worker.h"
-#include "zip.h"
+#pragma once
+
+#include <memory>
+#include <initializer_list>
+
+#include "process_private.h"
+
+namespace wave {
+
+class process
+{
+public:
+    process(std::initializer_list<std::string> args)
+        : handle{ new detail::process_handle(std::move(args)) } {}
+
+    class finished_source : public detail::generic_source<int64_t, int>
+    {
+    public:
+        finished_source(detail::process_handle* handle) : handle{handle} {}
+        template <class F>
+        void operator>>= (F&& functor) {
+            handle->exit_cb.reset(new detail::process_finished<std::decay_t<F>>{std::forward<F>(functor), handle });
+        }
+    private:
+        detail::process_handle* handle;
+    };
+
+    void kill(int signum) const { handle->kill(signum); }
+
+    pipe stdin() const { return handle->stdin_pipe; }
+    pipe stdout() const { return handle->stdout_pipe; }
+    pipe stderr() const {return handle->stderr_pipe; }
+
+    finished_source finished() const { return finished_source(handle); }
+
+private:
+    detail::process_handle* handle;
+};
+
+}
