@@ -61,7 +61,7 @@ struct spy
 TEST(SourceTests, Callback)
 {
     using namespace wave;
-    source<int> s;
+    shared_source<int> s;
     s >>= $(int data){
         EXPECT_EQ(data, 2);
     };
@@ -71,7 +71,7 @@ TEST(SourceTests, Callback)
 TEST(SourceTests, Exception)
 {
     using namespace wave;
-    source<int> s;
+    shared_source<int> s;
     s >>= $(int data) {
         EXPECT_EQ(data, 2);
         throw std::exception();
@@ -97,8 +97,8 @@ TEST(MergeTests, Callback)
 TEST(ZipTests, Callback)
 {
     using namespace wave;
-    source<int> s1;
-    source<std::string> s2;
+    shared_source<int> s1;
+    shared_source<std::string> s2;
     auto z = zip(s1, s2);
     z >>= $(int data1, std::string data2) {
         EXPECT_EQ(data1, 2);

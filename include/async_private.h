@@ -29,7 +29,7 @@
 
 #include <uv.h>
 
-#include "wave_private.h"
+#include "wave.h"
 
 namespace wave {
 namespace detail {

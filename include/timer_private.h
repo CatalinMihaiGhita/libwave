@@ -75,6 +75,7 @@ struct ticking : public callback
     ticking(F f, timer_handle* h)
         : functor(std::move(f))
     {
+        h->timer_cb.reset(this);
         h->timer.timer_cb = cb;
     }
 

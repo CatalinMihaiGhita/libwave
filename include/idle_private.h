@@ -71,12 +71,14 @@ struct idling : public callback
     idling(F&& f, idle_handle* h)
         : functor(std::move(f))
     {
+        h->idle_cb.reset(this);
         h->idle.idle_cb = cb;
     }
 
     idling(const F& f, idle_handle* h)
         : functor(f)
     {
+        h->idle_cb.reset(this);
         h->idle.idle_cb = cb;
     }
 

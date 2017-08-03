@@ -31,15 +31,13 @@ class end_stream
 {
 };
 
-class stream : public detail::generic_source<std::string>
+using stream_read_source = source<detail::stream_handle*, detail::stream_read, std::string>;
+using stream_wrote_source = source<detail::stream_handle*, detail::stream_write>;
+using stream_connected_source = source<detail::stream_handle*, detail::stream_write>;
+
+class stream : public stream_read_source
 {
 public:
-    template <class F>
-    void operator>>= (F functor) const {
-        handle->read_cb.reset(new detail::stream_read<F>{ std::move(functor), handle });
-        handle->start_reading();
-    }
-
     void operator<<(end_stream&&) const {
         handle->close();
     }
@@ -50,36 +48,8 @@ public:
         return *this;
     }
 
-    class wrote_source : public detail::generic_source<>
-    {
-    public:
-        template <class F>
-        void operator>>= (F functor) const {
-            handle->write_cb.reset(new detail::stream_write<F>{ std::move(functor), handle });
-        }
-    private:
-        friend class stream;
-        wrote_source(detail::stream_handle* handle)
-            : handle(handle){}
-        detail::stream_handle* handle;
-    };
-
-    class connected_source : public detail::generic_source<>
-    {
-    public:
-        template <class F>
-        void operator>>= (F functor) const {
-            handle->connect_cb.reset(new detail::stream_connect<F>{ std::move(functor), handle });
-        }
-    private:
-        friend class stream;
-        connected_source(detail::stream_handle* handle)
-            : handle(handle) {}
-        detail::stream_handle* handle;
-    };
-
-    wrote_source wrote() const { return handle; }
-    connected_source connected() const { return handle; }
+    stream_wrote_source wrote() const { return handle; }
+    stream_connected_source connected() const { return handle; }
 
     void shutdown() const { handle->shutdown(); }
     void stop_reading() const { handle->stop_reading(); }
@@ -87,11 +57,8 @@ public:
 
 protected:
     stream(detail::stream_handle* handle)
-        : handle(handle)
+        : base(handle)
     {}
-
-private:
-    detail::stream_handle* handle;
 };
 
 }

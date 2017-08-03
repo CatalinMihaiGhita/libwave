@@ -63,16 +63,34 @@ decltype(auto) operator||(F&& f, Exit&& exit)
     return detail::closure<std::decay_t<F>, std::decay_t<Exit>>{std::forward<F>(f), std::forward<Exit>(exit)};
 }
 
+template <typename Handle, template<typename...> class Callback, typename... Args>
+struct source : public detail::generic_source<Args...>
+{
+    typedef source base;
+
+    template <class F>
+    void operator>>= (F&& functor) const
+    {
+        new Callback<std::decay_t<F>, Args...>{ std::forward<F>(functor), handle };
+    }
+
+    source(Handle handle)
+        : handle(std::move(handle))
+    {}
+
+    Handle handle;
+};
+
 template <typename... T>
-class source : public detail::generic_source<T...>
+class shared_source : public detail::generic_source<T...>
 {
 public:
-    source()
+    shared_source()
         : handle{std::make_shared<detail::source_handle<T...>>()}
     {}
 
     template <class... U>
-    const source& operator()(U&&... values) const
+    const shared_source& operator()(U&&... values) const
     {
         handle->call(handle.get(), std::forward<U>(values)...);
         return *this;

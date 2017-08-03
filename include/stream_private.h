@@ -129,14 +129,16 @@ struct stream_handle
     uv_close_cb close_cb;
 };
 
-template <typename F>
+template <typename F, typename S>
 struct stream_read : public callback
 {
     stream_read(F f, stream_handle* h)
         : functor(std::move(f))
     {
+        h->read_cb.reset(this);
         h->stream->alloc_cb = alloc_cb;
         h->stream->read_cb = cb;
+        h->start_reading();
     }
 
     static void alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
@@ -172,6 +174,7 @@ struct stream_write : public callback
     stream_write(F f, stream_handle* h)
         : functor(std::move(f))
     {
+        h->write_cb.reset(this);
         h->write_handle.cb = cb;
     }
 
@@ -200,6 +203,7 @@ struct stream_connect : public callback
     stream_connect(F f, stream_handle* h)
         : functor(std::move(f))
     {
+        h->connect_cb.reset(this);
         h->connect_handle.cb = cb;
     }
 

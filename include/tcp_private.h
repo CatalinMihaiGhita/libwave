@@ -109,6 +109,7 @@ struct tcp_listen : public callback
     tcp_listen(F f, tcp_server_handle* server)
         : functor(std::move(f))
     {
+        server->listen_cb.reset(this);
         server->tcp.connection_cb = cb;
     }
 

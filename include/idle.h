@@ -29,19 +29,16 @@
 
 namespace wave {
 
-class idle : public detail::generic_source<>
+using idle_source = source<detail::idle_handle*, detail::idling>;
+
+class idle : public idle_source
 {
 public:
     idle(unsigned times = 1)
-        : handle{ new detail::idle_handle(times) } {}
+        : base{ new detail::idle_handle(times) }
+    {}
+
     void stop() const { handle->stop(); }
-    template <class F>
-    void operator>>= (F&& functor) {
-        handle->idle_cb.reset(new detail::idling<std::decay_t<F>>{ std::forward<F>(functor),
-                                                                   handle });
-    }
-private:
-    detail::idle_handle* handle;
 };
 
 }

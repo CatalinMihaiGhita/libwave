@@ -30,19 +30,16 @@
 
 namespace wave {
 
-class timer : public detail::generic_source<>
+using tick_source = source<detail::timer_handle*, detail::ticking>;
+
+class timer : public tick_source
 {
 public:
     timer(unsigned long long timeout, unsigned times = 1)
-        : handle{ new detail::timer_handle(timeout, times) }{}
-    void stop() const { handle->stop(); }
-    template <class F>
-    void operator>>= (F functor) {
-        handle->timer_cb.reset(new detail::ticking<F>{ std::move(functor), handle });
-    }
+        : base{ new detail::timer_handle(timeout, times) }
+    {}
 
-private:
-    detail::timer_handle* handle;
+    void stop() const { handle->stop(); }
 };
 
 }

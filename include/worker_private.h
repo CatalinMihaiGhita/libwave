@@ -26,22 +26,35 @@
 
 #include <uv.h>
 
-#include "wave_private.h"
+#include "wave.h"
 
 namespace wave {
 namespace detail {
 
-template<typename Task>
-struct worker_handle
+struct base_worker_handle
 {
     uv_work_t work;
-    Task task;
     std::unique_ptr<callback> after_cb;
+
+    base_worker_handle()
+    {
+        work.data = this;
+    }
+
+    void cancel()
+    {
+        uv_cancel(reinterpret_cast<uv_req_t*>(&work));
+    }
+};
+
+template<typename Task>
+struct worker_handle : public base_worker_handle
+{
+    Task task;
 
     worker_handle(Task task)
         : task(std::move(task))
     {
-        work.data = this;
         uv_queue_work(uv_default_loop(), &work, default_work_cb, default_after_work_cb);
     }
 
@@ -55,25 +68,21 @@ struct worker_handle
     {
         delete static_cast<worker_handle*>(handle->data);
     }
-
-    void cancel()
-    {
-        uv_cancel(reinterpret_cast<uv_req_t*>(&work));
-    }
 };
 
-template <typename Task, typename F >
+template <typename F>
 struct work_start : public callback
 {
-    work_start(F f, worker_handle<Task>* h)
+    work_start(F f, base_worker_handle* h)
         : functor(std::move(f))
     {
+        h->after_cb.reset(this);
         h->work.after_work_cb = cb;
     }
 
     static void cb(uv_work_t* handle, int status)
     {
-        auto h = static_cast<worker_handle<Task>*>(handle->data);
+        auto h = static_cast<base_worker_handle*>(handle->data);
         try {
             if (status != 0) {
                 throw std::exception();

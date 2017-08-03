@@ -28,33 +28,32 @@
 
 namespace wave {
 
+using tcp_server_connected_source = source<detail::tcp_server_handle*, detail::tcp_listen>;
+
 class tcp_client : public stream
 {
 public:
     tcp_client(std::string address, int port)
-        : stream(new detail::tcp_client_handle(std::move(address), port)) {}
+        : stream(new detail::tcp_client_handle(std::move(address), port))
+    {}
 
 private:
     tcp_client(detail::tcp_client_handle* handle)
-        : stream(handle) {}
+        : stream(handle)
+    {}
 
     friend class tcp_server;
 };
 
-class tcp_server : public detail::generic_source<int>
+class tcp_server : public tcp_server_connected_source
 {
 public:
     tcp_server(int port, int max_connections = SOMAXCONN)
-        : handle(new detail::tcp_server_handle(port, max_connections)) {}
+        : base(new detail::tcp_server_handle(port, max_connections))
+    {}
+
     tcp_client accept() const { return tcp_client(handle->accept()); }
     void close() const { handle->close(); }
-    template <class F>
-    void operator>>= (F functor) {
-        handle->listen_cb.reset(new detail::tcp_listen<F>{ std::move(functor), handle });
-    }
-
-private:
-    detail::tcp_server_handle* handle;
 };
 
 }
