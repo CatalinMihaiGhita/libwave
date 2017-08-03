@@ -48,7 +48,7 @@ server >>= ${
   auto client = server.accept();
   client << "I send you 50$";
   return client;
-} >>= $(std::string data)
+} >>= $(std::string data) {
   std::cout << "Client sent me: " << data << std::endl;
 };
 ```
@@ -60,7 +60,16 @@ client.connected() >>= ${
   std::cout << "Client connected" << std::endl;
   client << "I send you 100$";
   return client;
-} >>= $(std::string data)
+} >>= $(std::string data) {
   std::cout << "Server sent me: " << data << std::endl;
+};
+
+```
+### Spawning a process
+
+```C++
+process ls{"ls", "-l", "/home"};
+ls.stdout() >>= $(std::string output) {
+  std::cout << output;
 };
 ```
