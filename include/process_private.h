@@ -111,12 +111,14 @@ struct process_finished : public callback
     process_finished(F&& f, process_handle* h)
         : functor(std::move(f))
     {
+        h->exit_cb.reset(this);
         h->process.exit_cb = cb;
     }
 
     process_finished(const F& f, process_handle* h)
         : functor(f)
     {
+        h->exit_cb.reset(this);
         h->process.exit_cb = cb;
     }
 

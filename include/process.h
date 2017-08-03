@@ -29,23 +29,13 @@
 
 namespace wave {
 
+using process_finished_source = source<detail::process_handle*, detail::process_finished>;
+
 class process
 {
 public:
     process(std::initializer_list<std::string> args)
         : handle{ new detail::process_handle(std::move(args)) } {}
-
-    class finished_source : public detail::generic_source<int64_t, int>
-    {
-    public:
-        finished_source(detail::process_handle* handle) : handle{handle} {}
-        template <class F>
-        void operator>>= (F&& functor) {
-            handle->exit_cb.reset(new detail::process_finished<std::decay_t<F>>{std::forward<F>(functor), handle });
-        }
-    private:
-        detail::process_handle* handle;
-    };
 
     void kill(int signum) const { handle->kill(signum); }
 
@@ -53,7 +43,7 @@ public:
     pipe stdout() const { return handle->stdout_pipe; }
     pipe stderr() const {return handle->stderr_pipe; }
 
-    finished_source finished() const { return finished_source(handle); }
+    process_finished_source finished() const { return handle; }
 
 private:
     detail::process_handle* handle;
