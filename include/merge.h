@@ -43,13 +43,13 @@ struct merge_map : public abstract_source
     {}
 
     template <typename F>
-    void operator>>=(const F& f)
+    void operator>>=(const F& f) const
     {
         map_tuple(f, std::index_sequence_for<Us...>{});
     }
 
     template <typename F, size_t... I>
-    void map_tuple(const F& f, std::index_sequence<I...>)
+    void map_tuple(const F& f, std::index_sequence<I...>) const
     {
         int dummy[] = { 0, (std::get<I>(sources).operator>>=(f), 0) ... };
         (void)dummy;

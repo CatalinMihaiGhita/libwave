@@ -32,10 +32,14 @@ namespace wave {
 namespace detail {
 struct file_handle
 {
-    file_handle(std::string file_name) :
-        file_name(std::move(file_name))
+    file_handle(std::string file_name)
     {
+        write_req.cb = default_wrote_cb;
         close_req.data = nullptr;
+        if (uv_fs_open(uv_default_loop(), &open_req, file_name.c_str(), O_RDWR, 0, nullptr) <= 0) {
+            throw std::runtime_error("Cound not open file " + file_name);
+        }
+
     }
 
     void close()
@@ -45,7 +49,6 @@ struct file_handle
             uv_fs_close(uv_default_loop(), &close_req, open_req.result,
                         [](uv_fs_t* handle) {
                 auto p = static_cast<file_handle*>(handle->data);
-                std::unique_ptr<callback> open_cb(std::move(p->open_cb));
                 std::unique_ptr<callback> read_cb(std::move(p->read_cb));
                 std::unique_ptr<callback> write_cb(std::move(p->write_cb));
             });
@@ -53,48 +56,34 @@ struct file_handle
         }
     }
 
+    void write(std::string s)
+    {
+        buff = uv_buf_init(const_cast<char*>(s.data()), s.size());
+        uv_fs_write(uv_default_loop(), &write_req, open_req.result, &buff, 1, -1, write_req.cb);
+    }
+
+    static void default_wrote_cb(uv_fs_t*)
+    {
+    }
+
     uv_fs_t open_req;
     uv_fs_t close_req;
-    std::string file_name;
-    std::string data;
-    std::unique_ptr<callback> open_cb;
+    uv_fs_t write_req;
+    uv_buf_t buff;
     std::unique_ptr<callback> read_cb;
     std::unique_ptr<callback> write_cb;
 };
 
-template <typename F>
-struct open_file : public callback
-{
-    open_file(F f, const std::shared_ptr<file_handle>& file)
-        : functor(std::move(f))
-        , handle(file)
-    {
-        handle->open_req.data = this;
-        uv_fs_open(uv_default_loop(), &handle->open_req, handle->file_name.c_str(), O_RDONLY, 0,
-                   [](uv_fs_t *req) {
-            auto p = static_cast<open_file*>(req->data);
-            if (req->result >= 0) {
-                p->functor();
-                p->handle->open_cb.reset();
-            } else {
-                p->handle->close();
-            }
-        });
-    }
-
-    F functor;
-    std::shared_ptr<file_handle> handle;
-};
-
-template <typename F>
+template <typename F, typename S>
 struct read_file : public callback
 {
-    read_file(F f, std::shared_ptr<file_handle>& file)
+    read_file(F f, std::shared_ptr<file_handle> file)
         : functor(std::move(f))
-        , handle(file)
+        , handle(std::move(file))
         , memory(8 * 1024)
     {
         read_req.data = this;
+        handle->read_cb.reset(this);
         buff = uv_buf_init(memory.data(), memory.size());
         read();
     }
@@ -128,22 +117,23 @@ struct write_file : public callback
         : functor(std::move(f))
         , handle(file)
     {
-        buff = uv_buf_init(const_cast<char*>(handle->data.data()), handle->data.size());
-        uv_fs_write(uv_default_loop(), &write, handle->open_req.result, &buff, 1, -1,
-                    [](uv_fs_t *req) {
-            auto p = static_cast<write_file*>(req->data);
-            if (req->result > 0) {
-                p->functor();
-            }
-            uv_fs_req_cleanup(req);
-            p->handle->write_cb.reset();
-        });
+        handle->write_cb.reset(this);
+        handle->write_req.data = this;
+        handle->write_req.cb = wrote_cb;
     }
 
-    uv_fs_t write;
-    uv_buf_t buff;
+    static void wrote_cb(uv_fs_t *req) {
+        auto p = static_cast<write_file*>(req->data);
+        if (req->result > 0) {
+            p->functor();
+        }
+        uv_fs_req_cleanup(req);
+        p->handle->write_cb.reset();
+    }
+
     std::shared_ptr<file_handle> handle;
     F functor;
 };
+
 }
 }

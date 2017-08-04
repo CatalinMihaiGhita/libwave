@@ -82,17 +82,17 @@ struct source : public detail::generic_source<Args...>
 };
 
 template <typename... T>
-class shared_source : public detail::generic_source<T...>
+class function : public detail::generic_source<T...>
 {
 public:
-    shared_source()
-        : handle{std::make_shared<detail::source_handle<T...>>()}
+    function()
+        : handle{std::make_shared<detail::function_handle<T...>>()}
     {}
 
     template <class... U>
-    const shared_source& operator()(U&&... values) const
+    const function& operator()(U&&... values) const
     {
-        handle->call(handle.get(), std::forward<U>(values)...);
+        handle->f(handle.get(), std::forward<U>(values)...);
         return *this;
     }
 
@@ -102,17 +102,17 @@ public:
     }
 
     template <typename F>
-    void operator>>=(F&& f)
+    void operator>>=(F&& f) const
     {
-        handle->source_cb.reset(
-            new detail::source_callback<std::decay_t<F>, T...>{
+        handle->cb.reset(
+            new detail::function_callback<std::decay_t<F>, T...>{
                 std::forward<F>(f),
                 handle.get()
             });
     }
 
 private:
-    std::shared_ptr<detail::source_handle<T...>> handle;
+    std::shared_ptr<detail::function_handle<T...>> handle;
 };
 
 struct loop
@@ -122,6 +122,21 @@ struct loop
     {
         (void)uv_run(uv_default_loop(), UV_RUN_DEFAULT);
         uv_loop_close(uv_default_loop());
+    }
+};
+
+template <typename T>
+class ref : public std::shared_ptr<T>
+{
+public:
+    template <typename... Us>
+    ref(Us&&... us)
+        : std::shared_ptr<T>(std::make_shared<T>(std::forward<Us>(us)...))
+    {}
+
+    std::add_lvalue_reference_t<T> operator()() const
+    {
+        return this->operator *();
     }
 };
 

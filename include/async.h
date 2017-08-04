@@ -27,10 +27,10 @@
 namespace wave {
 
 template <typename... T>
-class async_source : public detail::generic_source<T...>
+class async_function : public detail::generic_source<T...>
 {
 public:
-    async_source()
+    async_function()
         : handle(std::make_shared<detail::async_handle<T...>>())
     {
         handle->self = handle;

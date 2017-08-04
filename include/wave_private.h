@@ -115,33 +115,34 @@ struct flat_map
 };
 
 template <typename... T>
-struct source_handle
+struct function_handle
 {
-    source_handle()
-        : call(nullptr)
+    function_handle()
+        : f(nullptr)
     {}
-    void(*call)(void*, T...);
-    std::unique_ptr<callback> source_cb;
+
+    void(*f)(void*, T...);
+    std::unique_ptr<callback> cb;
 };
 
 template <typename F, typename... T>
-struct source_callback : public callback
+struct function_callback : public callback
 {
-    source_callback(F f, source_handle<T...>* h)
+    function_callback(F f, function_handle<T...>* h)
         : functor(std::move(f))
     {
-        h->call = cb;
+        h->f = cb;
     }
 
     static void cb(void* data, T... args)
     {
-        auto h = static_cast<source_handle<T...>*>(data);
+        auto h = static_cast<function_handle<T...>*>(data);
         try {
-            auto p = static_cast<source_callback*>(h->source_cb.get());
+            auto p = static_cast<function_callback*>(h->cb.get());
             p->functor(std::move(args)...);
         }
         catch (...) {
-            h->source_cb.reset();
+            h->cb.reset();
         }
     }
 

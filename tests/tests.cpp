@@ -58,10 +58,10 @@ struct spy
 };
 
 
-TEST(SourceTests, Callback)
+TEST(FunctionTests, Callback)
 {
     using namespace wave;
-    shared_source<int> s;
+    function<int> s;
     s >>= $(int data){
         EXPECT_EQ(data, 2);
     };
@@ -71,7 +71,7 @@ TEST(SourceTests, Callback)
 TEST(SourceTests, Exception)
 {
     using namespace wave;
-    shared_source<int> s;
+    function<int> s;
     s >>= $(int data) {
         EXPECT_EQ(data, 2);
         throw std::exception();
@@ -97,8 +97,8 @@ TEST(MergeTests, Callback)
 TEST(ZipTests, Callback)
 {
     using namespace wave;
-    shared_source<int> s1;
-    shared_source<std::string> s2;
+    function<int> s1;
+    function<std::string> s2;
     auto z = zip(s1, s2);
     z >>= $(int data1, std::string data2) {
         EXPECT_EQ(data1, 2);
@@ -128,18 +128,12 @@ TEST(FlatMapTests, Callback)
 TEST(FileTests, Reader)
 {
     using namespace wave;
-    spy<bool> open_spy{ true, false };
+
     spy<std::string> read_spy{ "test", "" };
     loop loop;
 
     file f{ "text.txt" };
-    f >>= ${
-        open_spy.inform(true);
-        return file_reader(f);
-    } $finally{
-        rethrow();
-    }
-    >>= $(std::string data) {
+    f >>= $(std::string data) {
         read_spy.inform(data);
         f.close();
     } $finally{
@@ -179,7 +173,7 @@ TEST(AsyncTests, Affinity)
     using namespace wave;
     loop loop;
     auto main_id = std::this_thread::get_id();
-    async_source<std::thread::id> s;
+    async_function<std::thread::id> s;
     s >>= $(std::thread::id i) {
         EXPECT_NE(i, main_id);
     };
@@ -197,7 +191,7 @@ TEST(AsyncTests, Times)
     using namespace wave;
     spy<int> async_spy{ 9, 0 };
     loop loop;
-    async_source<int> s;
+    async_function<int> s;
     s >>= $(int i) {
         async_spy.inform(i);
     };

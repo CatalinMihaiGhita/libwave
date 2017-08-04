@@ -26,49 +26,26 @@
 
 #include "file_private.h"
 
-/// TODO: refactor
-
 namespace wave {
-class file : public detail::generic_source<>
+
+using file_read_source = source<std::shared_ptr<detail::file_handle>, detail::read_file, std::string>;
+using file_wrote_source = source<std::shared_ptr<detail::file_handle>, detail::write_file>;
+
+class file : public file_read_source
 {
 public:
     file(std::string file_name)
-        : handle{std::make_shared<detail::file_handle>(std::move(file_name))}{}
+        : base{std::make_shared<detail::file_handle>(std::move(file_name))}
+    {}
+
     void close() const { handle->close();}
-    template <class F>
-    void operator>>= (F functor) {
-        handle->open_cb.reset(new detail::open_file<F>{ std::move(functor), handle });
-    }
+    file_wrote_source wrote() { return handle; }
 
-private:
-    friend class file_reader;
-    friend class file_writer;
-    std::shared_ptr<detail::file_handle> handle;
+    template <typename String>
+    const file& operator<<(String&& data) const {
+        handle->write(std::forward<String>(data));
+        return *this;
+    }
 };
 
-class file_reader : public detail::generic_source<std::string>
-{
-public:
-    file_reader(file f)
-        : handle{ std::move(f.handle) } {}
-    template <class F>
-    void operator>>= (F functor) {
-        handle->read_cb.reset(new detail::read_file<F>{ std::move(functor), handle });
-    }
-private:
-    std::shared_ptr<detail::file_handle> handle;
-};
-
-class file_writer : public detail::generic_source<>
-{
-public:
-    file_writer(file f)
-        : handle{ std::move(f.handle) } {}
-    template <class F>
-    void operator>>= (F functor) {
-        handle->write_cb.reset(new detail::write_file<F>{ std::move(functor), handle });
-    }
-private:
-    std::shared_ptr<detail::file_handle> handle;
-};
 }
