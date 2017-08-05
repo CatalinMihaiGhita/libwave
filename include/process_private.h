@@ -33,23 +33,21 @@
 
 namespace wave {
 namespace detail {
+
 struct process_handle
 {
     uv_process_t process;
     uv_process_options_t options{0};
     std::unique_ptr<callback> exit_cb;
-    detail::pipe_handle* stdin_pipe;
-    detail::pipe_handle* stdout_pipe;
-    detail::pipe_handle* stderr_pipe;
+    detail::pipe_handle* stdin_pipe{nullptr};
+    detail::pipe_handle* stdout_pipe{nullptr};
+    detail::pipe_handle* stderr_pipe{nullptr};
     uv_stdio_container_t child_stdio[3];
     std::initializer_list<std::string> list;
     char** raw_args;
 
-    process_handle(std::initializer_list<std::string> args)
-        : stdin_pipe(new detail::pipe_handle())
-        , stdout_pipe(new detail::pipe_handle())
-        , stderr_pipe(new detail::pipe_handle())
-        , list(std::move(args))
+    process_handle(size_t flags, std::initializer_list<std::string> args)
+        : list(std::move(args))
         , raw_args(new char*[list.size() + 1])
     {
         size_t i = 0;
@@ -62,20 +60,37 @@ struct process_handle
         options.file = list.begin()->c_str();
         options.exit_cb = default_exit_cb;
 
-        child_stdio[0].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_READABLE_PIPE);
-        child_stdio[0].data.stream = stdin_pipe->stream;
+        if (flags & process_stdio_flags::stdin_pipe) {
+            stdin_pipe = new detail::pipe_handle();
+            child_stdio[0].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_READABLE_PIPE);
+            child_stdio[0].data.stream = stdin_pipe->stream;
+        } else {
+            child_stdio[0].flags = UV_IGNORE;
+            child_stdio[0].data.stream = nullptr;
+        }
 
-        child_stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-        child_stdio[1].data.stream = stdout_pipe->stream;
+        if (flags & process_stdio_flags::stdout_pipe) {
+            stdout_pipe = new detail::pipe_handle();
+            child_stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
+            child_stdio[1].data.stream = stdout_pipe->stream;
+        } else {
+            child_stdio[1].flags = UV_IGNORE;
+            child_stdio[1].data.stream = nullptr;
+        }
 
-        child_stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-        child_stdio[2].data.stream = stderr_pipe->stream;
+        if (flags & process_stdio_flags::stderr_pipe) {
+            stderr_pipe = new detail::pipe_handle();
+            child_stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
+            child_stdio[2].data.stream = stderr_pipe->stream;
+        } else {
+            child_stdio[2].flags = UV_IGNORE;
+            child_stdio[2].data.stream = nullptr;
+        }
 
         options.stdio = child_stdio;
         options.stdio_count = 3;
 
         if (uv_spawn(uv_default_loop(), &process, &options)) {
-            std::cout << "Error" << std::endl;
             throw std::runtime_error("Process " + *list.begin() + " spawn failed");
         }
     }

@@ -68,7 +68,7 @@ client.connected() >>= ${
 ### Spawning a process
 
 ```C++
-process ls{"ls", "-l", "/home"};
+process<stdout_pipe> ls{"ls", "-l", "/home"};
 ls.stdout() >>= $(std::string output) {
   std::cout << output;
 };

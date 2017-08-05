@@ -22,33 +22,10 @@
 
 #pragma once
 
-#include <memory>
-#include <initializer_list>
-
-#include "process_flags.h"
-#include "process_private.h"
-
-namespace wave {
-
-using process_finished_source = source<detail::process_handle*, detail::process_finished>;
-
-template <size_t flags = 0>
-class process
+enum process_stdio_flags
 {
-public:
-    process(std::initializer_list<std::string> args)
-        : handle{ new detail::process_handle(flags, std::move(args)) } {}
-
-    void kill(int signum) const { handle->kill(signum); }
-
-    pipe stdin() const { return handle->stdin_pipe; }
-    pipe stdout() const { return handle->stdout_pipe; }
-    pipe stderr() const {return handle->stderr_pipe; }
-
-    process_finished_source finished() const { return handle; }
-
-private:
-    detail::process_handle* handle;
+    no_pipe = 0,
+    stdin_pipe = 1,
+    stdout_pipe = 2,
+    stderr_pipe = 4
 };
-
-}

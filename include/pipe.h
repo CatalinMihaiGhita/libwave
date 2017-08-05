@@ -25,6 +25,7 @@
 #include "pipe_private.h"
 #include "wave.h"
 #include "stream.h"
+#include "process_flags.h"
 
 namespace wave {
 
@@ -40,6 +41,8 @@ public:
 private:
     pipe(detail::pipe_handle* handle)
         : stream(handle) {}
+
+    template <size_t>
     friend class process;
 };
 
